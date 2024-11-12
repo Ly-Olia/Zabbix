@@ -1,196 +1,92 @@
-# Zabbix Monitoring and User Authentication System
-
-This project consists of two main components:
-
-1. **Zabbix Monitoring System** - A Docker-based setup for monitoring the activity of users in a system across multiple regions, using Zabbix to collect metrics about active clients, active users, active administrators, and clients from different regions.
-2. **User Authentication System** - A RESTful API built with FastAPI to handle user registration, login, and logout. It provides endpoints for managing users and their activity statuses.
+Here's a complete `README.md` for your monitoring system project with Zabbix and Docker.
 
 ---
 
-## Table of Contents
+# Monitoring System Prototype with Zabbix and Docker
 
-- [Requirements](#requirements)
-- [Docker Setup](#docker-setup)
-  - [MariaDB Setup](#mariadb-setup)
-  - [Zabbix Setup](#zabbix-setup)
-  - [Zabbix Web Interface Setup](#zabbix-web-interface-setup)
-- [API Endpoints](#api-endpoints)
-  - [User Signup](#user-signup)
-  - [User Login](#user-login)
-  - [User Logout](#user-logout)
-- [Enums](#enums)
-- [Monitoring with Zabbix](#monitoring-with-zabbix)
-- [Mock Traffic Simulation](#mock-traffic-simulation)
-- [Utilities](#utilities)
-- [License](#license)
+## Overview
+This project demonstrates a Dockerized monitoring system using Zabbix. The system supports both agent-based and agentless monitoring methods to track server metrics, simulate user traffic, and analyze user activity. It includes a Python-based user authentication application and a traffic simulation script to test the monitoring setup under various load conditions.
 
----
+## Technologies
+- **Zabbix**: Monitors system performance, gathering metrics like CPU usage, memory, disk space, and network traffic.
+- **Docker & Docker Compose**: Used to deploy Zabbix components in isolated, scalable containers. This includes MariaDB Galera Cluster, Zabbix Server, Zabbix Agent, and Zabbix Web Interface.
+- **Python & FastAPI**: Used to create a REST API for user authentication with endpoints for registration, login, and logout.
+- **MySQL**: Stores user data for the authentication app.
 
-## Requirements
+## Features
+1. **Monitoring Setup**:
+   - Deploys Zabbix in a Docker environment, ensuring consistency and ease of scaling.
+   - Zabbix Agent gathers system metrics and sends them to the Zabbix Server, where they are stored in MariaDB and visualized in the Zabbix Web Interface.
 
-1. **Docker** - To run the Zabbix and MariaDB containers.
-2. **FastAPI** - Python web framework for the RESTful API.
-3. **MySQL** - Database to store user information and authentication details.
-4. **Python** - For the backend logic and traffic simulation.
-5. **Zabbix** - Monitoring tool for collecting metrics and generating reports.
+2. **User Authentication App**:
+   - REST API built with FastAPI, allowing users to register, login, and logout.
+   - Stores user data, including name, email, password, role, and location, in a MySQL database.
 
----
+3. **Traffic Simulation**:
+   - A Python script simulates random login/logout actions to create system load and test monitoring accuracy.
+   - Another script collects user activity metrics, sending this data to the Zabbix Server for monitoring and visualization.
 
-## Docker Setup
+## Setup Instructions
 
-### MariaDB Setup
+### Prerequisites
+- **Docker** and **Docker Compose** installed on your system.
+- **Python 3.x** and **FastAPI** installed for the user authentication app.
 
-The project uses MariaDB for storing user and authentication data. The database is set up within the `docker-compose.yml` file as a `mariadb` container.
+### Installation and Setup
 
-```yaml
-mariadb:
-  image: docker.io/bitnami/mariadb-galera:10.11
-  environment:
-    - MARIADB_ROOT_PASSWORD=12345
-    - MARIADB_GALERA_MARIABACKUP_PASSWORD=12345
-    - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://
-    - MARIADB_CHARACTER_SET=utf8mb4
-    - MARIADB_COLLATE=utf8mb4_bin
-  ports:
-    - '3306:3306'
-    - '4444:4444'
-    - '4567:4567'
-    - '4568:4568'
-  volumes:
-    - mariadb_galera_data:/bitnami/mariadb
-```
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd <repository-folder>
+   ```
 
-### Zabbix Setup
+2. **Set up Zabbix with Docker Compose**:
+   - Ensure Docker and Docker Compose are installed.
+   - Start the Zabbix services with the following command:
+     ```bash
+     docker-compose up -d
+     ```
+   - This command starts the Zabbix Server, Zabbix Agent, MariaDB Galera Cluster, and Zabbix Web Interface.
 
-The Zabbix server is configured to work with MariaDB. The container `zabbix-server` connects to MariaDB for data storage.
+3. **Run the User Authentication App**:
+   - Navigate to the authentication app folder:
+     ```bash
+     cd authentication_app
+     ```
+   - Install dependencies:
+     ```bash
+     pip install -r requirements.txt
+     ```
+   - Run the FastAPI app:
+     ```bash
+     uvicorn main:app --reload
+     ```
 
-```yaml
-zabbix-server:
-  image: zabbix/zabbix-server-mysql:ubuntu-6.4-latest
-  environment:
-    DB_SERVER_HOST: 'mariadb'
-    MYSQL_USER: 'root'
-    MYSQL_PASSWORD: '12345'
-  ports:
-    - "10051:10051"
-  depends_on:
-    - mariadb
-```
+4. **Simulate Traffic**:
+   - Navigate to the simulation script folder:
+     ```bash
+     cd simulation_scripts
+     ```
+   - Run the traffic simulation script:
+     ```bash
+     python simulate_traffic.py
+     ```
+   - This script will randomly generate login/logout actions to create system load and send metrics to the Zabbix Server.
 
-### Zabbix Web Interface Setup
+## Results
+The Zabbix Web Interface provides real-time insights into system performance and user activity levels. By visualizing metrics like CPU usage, memory, and user activity, you can monitor the system’s behavior under different load conditions.
 
-Zabbix web interface allows users to view monitoring data. It is set up using the `zabbix-web` container.
+## Usage
+1. Access the Zabbix Web Interface in your browser (typically at `http://localhost:8080` if using default Docker configuration).
+2. Use the FastAPI user authentication app’s endpoints for testing registration, login, and logout functions.
+3. Run the traffic simulation script to observe how the system handles user activity and load.
 
-```yaml
-zabbix-web:
-  image: zabbix/zabbix-web-apache-mysql:ubuntu-6.4-latest
-  environment:
-    DB_SERVER_HOST: 'mariadb'
-    MYSQL_USER: 'root'
-    MYSQL_PASSWORD: '12345'
-    ZBX_SERVER_HOST: 'zabbix-server'
-    PHP_TZ: Europe/Kiev
-  ports:
-    - "80:8080"
-    - "443:8443"
-  depends_on:
-    - mariadb
-    - zabbix-server
-```
-
----
-
-## API Endpoints
-
-### User Signup
-
-- **Endpoint:** `/user/signup`
-- **Method:** `POST`
-- **Description:** Allows new users to register by providing their full name, email, password, role, and location.
-- **Response:** Returns the user information upon successful registration.
-
-### User Login
-
-- **Endpoint:** `/user/login`
-- **Method:** `POST`
-- **Description:** Authenticates users based on email and password. Sets the user's status as active.
-- **Response:** Returns user data upon successful login.
-
-### User Logout
-
-- **Endpoint:** `/user/logout`
-- **Method:** `POST`
-- **Description:** Logs out users and sets their status to inactive.
-- **Response:** Returns user data upon successful logout.
-
----
-
-## Enums
-
-This project defines three `enum` classes to manage roles, locations, and metrics.
-
-### Role Enum
-Defines user roles:
-- `USER`
-- `ADMIN`
-
-### Location Enum
-Defines geographic locations:
-- `EUROPE`
-- `ASIA`
-- `NORTH_AMERICA`
-
-### Metrics Enum
-Defines system monitoring metrics:
-- `TOTAL_NUMBER_OF_ACTIVE_CLIENTS`
-- `TOTAL_NUMBER_OF_ACTIVE_USERS`
-- `TOTAL_NUMBER_OF_ACTIVE_ADMINS`
-- `NUMBER_OF_CLIENTS_FROM_EUROPE`
-- `NUMBER_OF_CLIENTS_FROM_ASIA`
-- `NUMBER_OF_CLIENTS_FROM_NORTH_AMERICA`
-
----
-
-## Monitoring with Zabbix
-
-The monitoring system collects and sends various metrics to the Zabbix server, including:
-
-- Total number of active clients
-- Total number of active users
-- Total number of active admins
-- Active clients from specific regions
-
-Each metric is sent to the Zabbix server for monitoring and report generation.
-
----
-
-## Mock Traffic Simulation
-
-The mock traffic simulation code simulates user logins and logouts over a specified period. This can be used for stress testing and monitoring system performance during high traffic.
-
-```python
-def mock_traffic():
-    start_time = datetime.datetime.now()
-    end_time = start_time + datetime.timedelta(minutes=5)
-    while datetime.datetime.now() < end_time:
-        login_users(count)
-        logout_users(count)
-```
-
----
-
-## Utilities
-
-The following utility functions are provided for handling database operations and user status updates:
-
-- `run_query(query, param, is_update)` - Executes a database query.
-- `check_user(data: UserLogin)` - Checks if a user exists.
-- `set_active(user: UserLogin, value: bool)` - Sets the user's active status.
-
----
+## Contributing
+If you'd like to contribute to this project, please fork the repository and submit a pull request. Contributions are welcome!
 
 ## License
-
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
+
+Let me know if you'd like any additional details or modifications!
