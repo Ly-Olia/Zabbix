@@ -194,8 +194,3 @@ The following utility functions are provided for handling database operations an
 This project is licensed under the MIT License.
 
 ---
-
-### Notes
-
-1. **Customizations:** You can customize the Docker setup to scale the Zabbix and MariaDB services or add additional metrics to monitor.
-2. **Security:** Ensure that sensitive information, like passwords, is handled securely in production environments.
