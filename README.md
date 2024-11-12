@@ -1,5 +1,3 @@
-# Zabbix
-
 # Zabbix Monitoring and User Authentication System
 
 This project consists of two main components:
