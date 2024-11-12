@@ -1,0 +1,126 @@
+version: '2.1'
+
+
+#This Docker file is used to set up a Zabbix monitoring environment
+#consisting of multiple services: MariaDB, Zabbix Server, Zabbix Agent,
+#and Zabbix Web. The services are connected via a bridge network called 'zabbix-net'
+
+
+# Define a bridge network for the containers to communicate with each other
+networks:
+  zabbix-net:
+    driver: bridge
+
+services:
+# MariaDB container for database storage
+  mariadb:
+    # Connect the container to the zabbix-net network
+    networks:
+      - zabbix-net
+    # Use the mariadb-galera image from Docker Hub
+    image: docker.io/bitnami/mariadb-galera:10.11
+    # Map container ports to the host machine
+    ports:
+      - '3306:3306'
+      - '4444:4444'
+      - '4567:4567'
+      - '4568:4568'
+    # Persist data in the mariadb_galera_data volume
+    volumes:
+      - mariadb_galera_data:/bitnami/mariadb
+
+    environment:
+      - MARIADB_ROOT_PASSWORD=12345
+      - MARIADB_GALERA_MARIABACKUP_PASSWORD=12345
+      - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://
+      - MARIADB_CHARACTER_SET=utf8mb4
+      - MARIADB_COLLATE=utf8mb4_bin
+
+    healthcheck:
+      test: ['CMD', '/opt/bitnami/scripts/mariadb-galera/healthcheck.sh']
+      interval: 15s # how often to perform the health check
+      timeout: 5s   # how long to wait for the health check to complete
+      retries: 6    # how many times to retry the health check if it fails
+
+  # Zabbix server container for monitoring
+  zabbix-server:
+
+    image: zabbix/zabbix-server-mysql:ubuntu-6.4-latest
+    networks:
+      - zabbix-net
+
+    container_name: zabbix-server
+    environment:
+       # Use "mariadb" as the database server host
+      DB_SERVER_HOST: 'mariadb'
+      MYSQL_USER: 'root'
+      MYSQL_PASSWORD: '12345'
+      ENABLE_TIMESCALEDB: true
+      ZBX_STARTREPORTWRITERS: 2
+    # Map container ports to the host machine
+    ports:
+      - "10051:10051"
+    # Link the container to the mariadb container
+    links:
+      - mariadb
+    # Depend on the mariadb container to start up first
+    depends_on:
+      - mariadb
+
+  # Zabbix agent container for monitoring host metrics
+  zabbix-agent:
+    image: zabbix/zabbix-agent:ubuntu-6.4-latest
+    user: root
+    networks:
+      - zabbix-net
+    # Link the container to the zabbix-server container
+    links:
+      - zabbix-server
+    # Set privileged access mode for allowing resource access
+    privileged: true
+    environment:
+      ZBX_HOSTNAME: Zabbix server
+    ports:
+      - "10050:10050"
+
+  # Zabbix web interface container for viewing monitoring data
+  zabbix-web:
+
+    image: zabbix/zabbix-web-apache-mysql:ubuntu-6.4-latest
+    ports:
+      - "80:8080"
+      - "443:8443"
+    networks:
+      - zabbix-net
+    container_name: zabbix-web
+    environment:
+      DB_SERVER_HOST: 'mariadb'
+      MYSQL_USER: 'root'
+      MYSQL_PASSWORD: '12345'
+      ZBX_SERVER_HOST: 'zabbix-server'
+      PHP_TZ: Europe/Kiev
+    # Set up links between the container and the mariadb and zabbix-server containers
+    links:
+      - mariadb
+      - zabbix-server
+    depends_on:
+      - mariadb
+      - zabbix-server
+
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: 'user'
+      MYSQL_USER: 'mysql'
+      MYSQL_PASSWORD: 'root'
+      MYSQL_ROOT_PASSWORD: 'root'
+    ports:
+      - '3307:3306'
+    expose:
+      - '3306'
+    volumes:
+      - mysql_data_container:/var/lib/mysql
+
+volumes:
+  mariadb_galera_data:
+  mysql_data_container:
