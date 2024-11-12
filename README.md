@@ -1,7 +1,3 @@
-Here's a complete `README.md` for your monitoring system project with Zabbix and Docker.
-
----
-
 # Monitoring System Prototype with Zabbix and Docker
 
 ## Overview
@@ -87,6 +83,3 @@ If you'd like to contribute to this project, please fork the repository and subm
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
----
-
-Let me know if you'd like any additional details or modifications!
